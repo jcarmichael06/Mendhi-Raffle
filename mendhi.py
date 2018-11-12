@@ -1,4 +1,5 @@
 from openpyxl import load_workbook
+from operator import itemgetter
 import random
 
 zips = {}
@@ -14,8 +15,13 @@ for r in range(1,101):
 
 winners = []
 
-wb = load_workbook('Sample More Doc.xlsx')
-ws = wb.active
+wb = load_workbook('Mehndi Lottery.xlsx')
+for sheet in wb:
+	if sheet.title != 'Sheet1':
+		wb.remove(sheet)
+ws1 = wb.create_sheet("Winners")
+cheaterSheet = wb.create_sheet("Cheaters")
+ws = wb["Sheet1"]
 
 class Contestants:
 
@@ -26,13 +32,16 @@ class Contestants:
 		self.createContestants()
 		self.findSuspiciousPeople()
 		self.deleteSuspiciousPerson()
+		self.publishCheaters()
 
 	def createContestants(self):
 		for r in range(2,ws.max_row+1):
 			person = []
-			for x in range(1,4):
-				person.append(str(ws.cell(row=r,column=x).value).upper().strip().split(' ')[0])
-			person.append(str(int(ws.cell(row=r,column=4).value)))
+			person.append(str(ws.cell(row=r,column=2).value).upper().strip().split(' ')[0])
+			person.append(str(ws.cell(row=r,column=3).value).upper().strip().split(' ')[0])
+			person.append(str(ws.cell(row=r,column=4).value).strip())
+			person.append(str(int(ws.cell(row=r,column=5).value)))
+			person.append(str(ws.cell(row=r,column=6).value).upper().strip().split(' ')[0])
 			if person in self.cheaters:
 				pass
 			elif person in self.contestants:
@@ -40,42 +49,40 @@ class Contestants:
 				self.contestants.remove(person)
 			else:
 				self.contestants.append(person)
-
-	def printContestants(self):
-		print("CONTESTANTS")
-		print('-'*20)
-		for x in range(len(self.contestants)):
-			print(formatPerson(self.contestants[x]))
 	
-	def printCheaters(self):
-			print("CHEATERS")
-			print('-'*20)
-			for x in range(len(self.cheaters)):
-				print(formatPerson(self.cheaters[x]))
+	def publishCheaters(self):
+		for x in range(len(self.cheaters)):
+			cheaterSheet.cell(row=x+1,column=1,value=self.cheaters[x][0])
+			cheaterSheet.cell(row=x+1,column=2,value=self.cheaters[x][1])
+			cheaterSheet.cell(row=x+1,column=3,value=self.cheaters[x][2])
+			cheaterSheet.cell(row=x+1,column=4,value=self.cheaters[x][3])
+			cheaterSheet.cell(row=x+1,column=5,value=self.cheaters[x][4])
 
 	def findSuspiciousPeople(self):
-		for person in self.contestants:
-			p1 = set(tuple(person))
-			for person2 in self.contestants:
-				p2 = set(tuple(person2))
-				if len(p1.intersection(p2)) == 3:
-					self.suspiciousPeeps.append(person)
-
-	def printSuspiciousPeople(self):
-		print("SUSPICIOUS PEOPLE")
-		print('-'*20)
-		for x in range(len(self.suspiciousPeeps)):
-			print(formatPerson(self.suspiciousPeeps[x]))
+		for x in range(len(self.contestants)):
+			p1 = {self.contestants[x][1],self.contestants[x][4]}
+			for y in range(x+1,len(self.contestants)):
+				p2 = {self.contestants[y][1],self.contestants[y][4]}
+				if len(p1.intersection(p2)) == 2:
+					self.suspiciousPeeps.append(self.contestants[x])
+					self.suspiciousPeeps.append(self.contestants[y])
+					break
 
 	def deleteSuspiciousPerson(self):
-		for person in self.suspiciousPeeps:
-			YorN = raw_input('Delete {} from contestant list? (y or n)'.format(formatPerson(person)))				
+		x = 0
+		while x < (len(self.suspiciousPeeps)):
+			YorN = input('{}\n{}\nDelete from contestant list? (y or n)'.format(formatPerson(self.suspiciousPeeps[x]),formatPerson(self.suspiciousPeeps[x+1])))				
 			if YorN.upper() == 'Y':					
-				self.contestants.remove(person)
-
+				self.contestants.remove(self.suspiciousPeeps[x])
+				self.cheaters.append(self.suspiciousPeeps[x])
+				self.contestants.remove(self.suspiciousPeeps[x+1])
+				self.cheaters.append(self.suspiciousPeeps[x+1])				
+				x += 2
+			else:
+				x += 2
 
 def formatPerson(person):
-		return '{} {} {} {}'.format(person[1],person[0],person[2],person[3])
+		return '{} {} {} {} {}'.format(person[0],person[1],person[4],person[3],person[2])
 
 class Winners:
 
@@ -84,7 +91,7 @@ class Winners:
 		self.winners = []
 		self.numberofWinners = numberofWinners
 		self.findWinners()
-		self.printWinners()
+		self.publishWinners()
 
 	def findWinners(self):
 		for x in range(self.numberofWinners):
@@ -92,18 +99,20 @@ class Winners:
 			self.winners.append(winner)
 			self.contestantList.remove(winner)	
 
-	def printWinners(self):
+	def publishWinners(self):
+		sorted(self.winners,key=itemgetter(1))
 		for x in range(len(self.winners)):
-			print('The winner is :{} from {}'.format(formatPerson(self.winners[x]),zips[self.winners[x][3][:3]]))	
+			ws1.cell(row=x+1,column=1,value=self.winners[x][0])
+			ws1.cell(row=x+1,column=2,value=self.winners[x][1])
+			ws1.cell(row=x+1,column=3,value=self.winners[x][2])
+			ws1.cell(row=x+1,column=4,value=self.winners[x][3])
+			ws1.cell(row=x+1,column=5,value=self.winners[x][4])
+			ws1.cell(row=x+1,column=6,value=zips[self.winners[x][3][:3]])
 
 contest = Contestants()
-contest.printContestants()
-print("")
-contest.printCheaters()
-print("")
-contest.printSuspiciousPeople()
-print("")
-Winners(contest.contestants,2)
+winners = Winners(contest.contestants,694)
+wb.save('Mehndi Lottery.xlsx')
+#batchgeo for heat map
 
 
 
