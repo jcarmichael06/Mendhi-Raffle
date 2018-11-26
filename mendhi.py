@@ -39,6 +39,7 @@ class Contestants:
 		self.publishContestants()
 
 	def createContestants(self):
+		messagebox.showinfo("Information","Eliminate Cheaters")
 		for r in range(1,ws.max_row+1):
 			person = []
 			person.append(str(ws.cell(row=r,column=2).value).upper().strip().split(' ')[0])
